@@ -826,3 +826,67 @@ func Test_boolErr(t *testing.T) {
 	must.False(tokenizer.Next(token))
 	must.Equal(errorToken, token.Type)
 }
+
+func Test_null(t *testing.T) {
+	must := require.New(t)
+	// nothing
+	tokenizer := NewTokenizerSize(8)
+	must.NotNil(tokenizer)
+	token := &Token{}
+
+	tokenizer.ReadString("null")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+
+	tokenizer.ReadString("    null")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+
+	tokenizer.ReadString("     null")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+
+	tokenizer.ReadString("    null    ")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+
+	tokenizer.ReadString("       null")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+
+	tokenizer.ReadString("        null      ")
+	must.True(tokenizer.Next(token))
+	must.Equal(nullToken, token.Type)
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+}
+
+func Test_nullErr(t *testing.T) {
+	must := require.New(t)
+	// nothing
+	tokenizer := NewTokenizerSize(8)
+	must.NotNil(tokenizer)
+	token := &Token{}
+
+	tokenizer.ReadString("Null")
+	must.False(tokenizer.Next(token))
+	must.Equal(invalidToken, token.Type)
+
+	tokenizer.ReadString("nulL")
+	must.False(tokenizer.Next(token))
+	must.Equal(invalidToken, token.Type)
+
+	tokenizer.Read(newErrorReader("     null"))
+	must.False(tokenizer.Next(token))
+	must.Equal(errorToken, token.Type)
+}

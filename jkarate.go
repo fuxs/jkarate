@@ -15,6 +15,7 @@ const (
 	boolToken
 	doneToken
 	colonToken
+	commaToken
 	nullToken
 	numToken
 	objectLeftToken
@@ -31,6 +32,7 @@ var hexRune [256]uint32
 
 var RUE []byte = []byte{'r', 'u', 'e'}
 var ALSE []byte = []byte{'a', 'l', 's', 'e'}
+var ULL []byte = []byte{'u', 'l', 'l'}
 
 func init() {
 	tokenType['"'] = stringToken
@@ -53,6 +55,7 @@ func init() {
 	tokenType['['] = arrayLeftToken
 	tokenType[']'] = arrayRightToken
 	tokenType[':'] = colonToken
+	tokenType[','] = commaToken
 	tokenType[' '] = whiteSpaceToken
 	tokenType['\t'] = whiteSpaceToken
 	tokenType['\n'] = whiteSpaceToken
@@ -250,6 +253,42 @@ LOOP_BUFFER:
 					t.end = n
 					return true
 				}
+			}
+		}
+	case nullToken:
+		for {
+			if i++; i == n {
+				for {
+					if n, err = t.reader.Read(t.buffer); n == 0 {
+						if err != nil {
+							token.Err = err
+							token.Type = errorToken
+							t.begin = 0
+							t.end = 0
+							return false
+						}
+					} else {
+						t.begin = 0
+						i = 0
+						break
+					}
+				}
+			}
+			if t.buffer[i] != ULL[j] {
+				token.Err = fmt.Errorf("invalid null value in line %v", t.line)
+				token.Type = invalidToken
+				t.begin = i
+				t.end = n
+				return false
+			}
+			j++
+			if j == 3 {
+				token.Str = "null"
+				token.Number = 0
+				token.Type = nullToken
+				t.begin = i + 1
+				t.end = n
+				return true
 			}
 		}
 	case numToken:
