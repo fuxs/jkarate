@@ -180,7 +180,18 @@ LOOP_BUFFER:
 	// i == t.begin
 	// n == t.end
 	switch tt {
-
+	case arrayLeftToken:
+		token.Type = arrayLeftToken
+		token.Str = "["
+		t.begin = i + 1
+		t.end = n
+		return true
+	case arrayRightToken:
+		token.Type = arrayRightToken
+		token.Str = "]"
+		t.begin = i + 1
+		t.end = n
+		return true
 	case boolToken:
 		if c == 't' {
 			for {
@@ -210,9 +221,9 @@ LOOP_BUFFER:
 				}
 				j++
 				if j == 3 {
+					token.Type = boolToken
 					token.Str = "true"
 					token.Number = 1
-					token.Type = boolToken
 					t.begin = i + 1
 					t.end = n
 					return true
@@ -255,6 +266,18 @@ LOOP_BUFFER:
 				}
 			}
 		}
+	case colonToken:
+		token.Type = colonToken
+		token.Str = ":"
+		t.begin = i + 1
+		t.end = n
+		return true
+	case commaToken:
+		token.Type = commaToken
+		token.Str = ","
+		t.begin = i + 1
+		t.end = n
+		return true
 	case nullToken:
 		for {
 			if i++; i == n {
@@ -480,6 +503,18 @@ LOOP_BUFFER:
 		token.Str = string(append(current, t.buffer[t.begin:i]...))
 		token.Type = numToken
 		t.begin = i
+		t.end = n
+		return true
+	case objectLeftToken:
+		token.Type = objectLeftToken
+		token.Str = "{"
+		t.begin = i + 1
+		t.end = n
+		return true
+	case objectRightToken:
+		token.Type = objectRightToken
+		token.Str = "}"
+		t.begin = i + 1
 		t.end = n
 		return true
 	case stringToken:

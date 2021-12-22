@@ -890,3 +890,35 @@ func Test_nullErr(t *testing.T) {
 	must.False(tokenizer.Next(token))
 	must.Equal(errorToken, token.Type)
 }
+
+func Test_tokens(t *testing.T) {
+	must := require.New(t)
+	// nothing
+	tokenizer := NewTokenizerSize(8)
+	must.NotNil(tokenizer)
+	token := &Token{}
+
+	tokenizer.ReadString("{ } [ ] : ,")
+	must.True(tokenizer.Next(token))
+	must.Equal(objectLeftToken, token.Type)
+	must.EqualValues("{", token.Str)
+	must.True(tokenizer.Next(token))
+	must.Equal(objectRightToken, token.Type)
+	must.EqualValues("}", token.Str)
+	must.True(tokenizer.Next(token))
+	must.Equal(arrayLeftToken, token.Type)
+	must.EqualValues("[", token.Str)
+	must.True(tokenizer.Next(token))
+	must.Equal(arrayRightToken, token.Type)
+	must.EqualValues("]", token.Str)
+
+	must.True(tokenizer.Next(token))
+	must.Equal(colonToken, token.Type)
+	must.EqualValues(":", token.Str)
+	must.True(tokenizer.Next(token))
+	must.Equal(commaToken, token.Type)
+	must.EqualValues(",", token.Str)
+
+	must.True(tokenizer.Next(token))
+	must.Equal(doneToken, token.Type)
+}
