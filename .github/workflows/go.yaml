@@ -15,24 +15,38 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       
-    - name: Setup go
+    - name: Setup Go environment
       uses: actions/setup-go@v2
       with:
         go-version: ^1.17
       
-    - name: Test
+    - name: Run test with coverage
       run: go test -race -covermode=atomic -coverprofile=coverage.out
 
+    - name: Publish code coverage badge
+      run: |
+        set -x
+        COVERAGE=`go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+'`
+        if (( $(echo "$COVERAGE <= 50" | bc -l) )) ; then
+          COLOR=red
+        elif (( $(echo "$COVERAGE > 90" | bc -l) )); then
+          COLOR=green
+        else
+          COLOR=orange
+        fi
+        curl "https://img.shields.io/badge/coverage-$COVERAGE%25-$COLOR" > coverage.svg
+
     - id: auth
-      name: 'Authenticate to Google Cloud'
-      uses: 'google-github-actions/auth@v0'
+      name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0
       with: 
         create_credentials_file: true
         workload_identity_provider: 'projects/1023502242916/locations/global/workloadIdentityPools/github-pool/providers/github'
         service_account: 'github-status@psychic-sensor-331908.iam.gserviceaccount.com'
 
-    - id: 'upload-file'
-      uses: 'google-github-actions/upload-cloud-storage@v0'
+    - id: upload-file
+      name: Upload badge to Google Cloud Storage
+      uses: google-github-actions/upload-cloud-storage@v0
       with:
-        path: 'coverage.out'
-        destination: 'jkarate/coverage.out'
+        path: badge.svg
+        destination: jkarate/labels
