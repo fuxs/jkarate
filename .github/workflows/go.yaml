@@ -34,7 +34,7 @@ jobs:
         else
           COLOR=orange
         fi
-        curl "https://img.shields.io/badge/coverage-$COVERAGE%25-$COLOR" > coverage.svg
+        curl "https://img.shields.io/static/v1?label=coverage&message=$COVERAGE%25&color=$COLOR&style=flat-square" > coverage.svg
 
     - id: auth
       name: Authenticate to Google Cloud
