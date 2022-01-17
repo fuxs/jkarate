@@ -24,6 +24,23 @@ const (
 	whiteSpaceToken
 )
 
+var tokenStr []string = []string{
+	"'invalid'",
+	"'error'",
+	"'['",
+	"']'",
+	"'boolean'",
+	"'done'",
+	"':'",
+	"','",
+	"'null'",
+	"'number'",
+	"'{'",
+	"'}'",
+	"'string'",
+	"'whitespace'",
+}
+
 const defaultBufferSize = 4096
 
 var tokenType [256]int
@@ -90,6 +107,10 @@ type Token struct {
 	Str    string
 	Err    error
 	Number int
+}
+
+func (t *Token) TypeStr() string {
+	return tokenStr[t.Type]
 }
 
 func (t *Token) Boolean() bool {

@@ -1,7 +1,7 @@
 package jkarate
 
 import (
-	"errors"
+	"fmt"
 )
 
 func (t *Tokenizer) Parse() (*Element, error) {
@@ -28,7 +28,7 @@ func (t *Tokenizer) Parse() (*Element, error) {
 				return nil, token.Err
 			}
 			if token.Type != doneToken {
-				return nil, errors.New("unexpected token after top level object")
+				return nil, fmt.Errorf("unexpected token %s after top level object in line %v", token.TypeStr(), t.line)
 			}
 			return current, nil
 		}
@@ -48,7 +48,7 @@ func (t *Tokenizer) Parse() (*Element, error) {
 				return nil, token.Err
 			}
 			if token.Type != doneToken {
-				return nil, errors.New("unexpected token after top level array")
+				return nil, fmt.Errorf("unexpected token %s after top level array in line %v", token.TypeStr(), t.line)
 			}
 			return current, nil
 		}
@@ -60,7 +60,7 @@ func (t *Tokenizer) Parse() (*Element, error) {
 		}
 		return current, nil
 	}
-	return nil, errors.New("unexpected token, must be '[', '{' or empty file")
+	return nil, fmt.Errorf("unexpected token %s in line %v, must be '[', '{' or empty file", token.TypeStr(), t.line)
 
 NAME_STATE:
 	if !t.Next(token) {
@@ -78,25 +78,25 @@ NAME_STATE_FIRST:
 			}
 			switch token.Type {
 			case stringToken:
-				child = &Element{
+				current.Object[name] = &Element{
 					Type:  stringType,
 					Value: token.Str,
 				}
 				goto NEXT_OBJECT_PAIR
 			case numToken:
-				child = &Element{
+				current.Object[name] = &Element{
 					Type:  numberType,
 					Value: token.Str,
 				}
 				goto NEXT_OBJECT_PAIR
 			case boolToken:
-				child = &Element{
+				current.Object[name] = &Element{
 					Type:  boolType,
 					Value: token.Str,
 				}
 				goto NEXT_OBJECT_PAIR
 			case nullToken:
-				child = &Element{
+				current.Object[name] = &Element{
 					Type:  nullType,
 					Value: "",
 				}
@@ -108,7 +108,7 @@ NAME_STATE_FIRST:
 					Object: make(map[string]*Element),
 					Value:  name,
 				}
-				goto NAME_STATE
+				goto CHECK_EMPTY_OBJECT
 			case arrayLeftToken:
 				es.Push(current)
 				current = &Element{
@@ -116,16 +116,16 @@ NAME_STATE_FIRST:
 					Array: make([]*Element, 0, 8),
 					Value: name,
 				}
-				goto ARRAY_STATE
+				goto CHECK_EMPTY_ARRAY
 			}
-			return nil, errors.New("unexpected token")
+			return nil, fmt.Errorf("unexpected token %s in line %v", token.TypeStr(), t.line)
 		}
-		return nil, errors.New("expected ':'")
+		return nil, fmt.Errorf("unexpected token %s in line %v, expected ':'", token.TypeStr(), t.line)
 	}
-	return nil, errors.New("expected string")
+
+	return nil, fmt.Errorf("unexpected token %s in line %v, expected 'string'", token.TypeStr(), t.line)
 
 NEXT_OBJECT_PAIR:
-	current.Object[name] = child
 	if !t.Next(token) {
 		return nil, token.Err
 	}
@@ -139,19 +139,19 @@ NEXT_OBJECT_PAIR:
 				return nil, token.Err
 			}
 			if token.Type != doneToken {
-				return nil, errors.New("unexpected token after top level object")
+				return nil, fmt.Errorf("unexpected token %s after top level object in line %v", token.TypeStr(), t.line)
 			}
 			return child, nil
 		}
 		if current.Type == objectType {
-			current.Object[current.Value] = child
+			current.Object[child.Value] = child
 			goto NEXT_OBJECT_PAIR
 		}
 		// must be an array
 		current.Array = append(current.Array, child)
 		goto NEXT_ARRAY_ELEMENT
 	}
-	return nil, errors.New("unxpected token")
+	return nil, fmt.Errorf("unexpected token %s in line %v, expected ',' or '}'", token.TypeStr(), t.line)
 
 ARRAY_STATE:
 	if !t.Next(token) {
@@ -199,7 +199,7 @@ ARRAY_STATE_FIRST:
 		}
 		goto ARRAY_STATE
 	}
-	return nil, errors.New("unexpected token")
+	return nil, fmt.Errorf("unexpected token %s in line %v", token.TypeStr(), t.line)
 NEXT_ARRAY_ELEMENT:
 	current.Array = append(current.Array, child)
 	if !t.Next(token) {
@@ -215,17 +215,68 @@ NEXT_ARRAY_ELEMENT:
 				return nil, token.Err
 			}
 			if token.Type != doneToken {
-				return nil, errors.New("unexpected token after top level array")
+				return nil, fmt.Errorf("unexpected token %s after top level array in line %v", token.TypeStr(), t.line)
 			}
 			return child, nil
 		}
 		if current.Type == objectType {
-			current.Object[current.Value] = child
+			current.Object[child.Value] = child
 			goto NEXT_OBJECT_PAIR
 		}
 		// must be an arry
 		current.Array = append(current.Array, child)
 		goto NEXT_ARRAY_ELEMENT
 	}
-	return nil, errors.New("expected , or ]")
+	return nil, fmt.Errorf("unexpected token %s in line %v, expected ',' or ']'", token.TypeStr(), t.line)
+
+CHECK_EMPTY_OBJECT:
+	// check for empty object
+	if !t.Next(token) {
+		return nil, token.Err
+	}
+	if token.Type == objectRightToken {
+		child = current
+		if current = es.Pop(); current == nil {
+			if !t.Next(token) {
+				return nil, token.Err
+			}
+			if token.Type != doneToken {
+				return nil, fmt.Errorf("unexpected token %s after top level object in line %v", token.TypeStr(), t.line)
+			}
+			return child, nil
+		}
+		if current.Type == objectType {
+			current.Object[child.Value] = child
+			goto NEXT_OBJECT_PAIR
+		}
+		// must be an array
+		current.Array = append(current.Array, child)
+		goto NEXT_ARRAY_ELEMENT
+	}
+	goto NAME_STATE_FIRST
+
+CHECK_EMPTY_ARRAY:
+	if !t.Next(token) {
+		return nil, token.Err
+	}
+	if token.Type == arrayRightToken {
+		child = current
+		if current = es.Pop(); current == nil {
+			if !t.Next(token) {
+				return nil, token.Err
+			}
+			if token.Type != doneToken {
+				return nil, fmt.Errorf("unexpected token %s after top level array in line %v", token.TypeStr(), t.line)
+			}
+			return child, nil
+		}
+		if current.Type == objectType {
+			current.Object[child.Value] = child
+			goto NEXT_OBJECT_PAIR
+		}
+		// must be an arry
+		current.Array = append(current.Array, child)
+		goto NEXT_ARRAY_ELEMENT
+	}
+	goto ARRAY_STATE_FIRST
 }
