@@ -49,6 +49,21 @@ func (e *Element) StringE(path ...string) (string, error) {
 	}
 }
 
+func (e *Element) At(index int) *Element {
+	result, _ := e.AtE(index)
+	return result
+}
+
+func (e *Element) AtE(index int) (*Element, error) {
+	if e.Type != arrayType {
+		return nil, fmt.Errorf("element %s does not support indexed access", elmentStr[e.Type])
+	}
+	if index >= 0 && index < len(e.Array) {
+		return e.Array[index], nil
+	}
+	return nil, fmt.Errorf("index %v is out of range [0:%v]", index, len(e.Array))
+}
+
 func (e *Element) Get(path ...string) *Element {
 	result, _ := e.GetE(path...)
 	return result
@@ -73,9 +88,7 @@ func (e *Element) GetE(path ...string) (*Element, error) {
 		if current.Type == arrayType {
 			if index, err = strconv.Atoi(name); err == nil {
 				if index < len(current.Array) && index >= 0 {
-					if current = current.Array[index]; current == nil {
-						return nil, fmt.Errorf("could not find path element #%v with index %s", i, name)
-					}
+					current = current.Array[index]
 					continue
 				}
 				err = fmt.Errorf("path element #%v with index %s is out of range [0:%v]", i, name, len(current.Array))

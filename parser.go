@@ -160,27 +160,27 @@ ARRAY_STATE:
 ARRAY_STATE_FIRST:
 	switch token.Type {
 	case stringToken:
-		child = &Element{
+		current.Array = append(current.Array, &Element{
 			Type:  stringType,
 			Value: token.Str,
-		}
+		})
 		goto NEXT_ARRAY_ELEMENT
 	case numToken:
-		child = &Element{
+		current.Array = append(current.Array, &Element{
 			Type:  numberType,
 			Value: token.Str,
-		}
+		})
 		goto NEXT_ARRAY_ELEMENT
 	case boolToken:
-		child = &Element{
+		current.Array = append(current.Array, &Element{
 			Type:  boolType,
 			Value: token.Str,
-		}
+		})
 		goto NEXT_ARRAY_ELEMENT
 	case nullToken:
-		child = &Element{
+		current.Array = append(current.Array, &Element{
 			Type: nullType,
-		}
+		})
 		goto NEXT_ARRAY_ELEMENT
 	case objectLeftToken:
 		es.Push(current)
@@ -189,7 +189,7 @@ ARRAY_STATE_FIRST:
 			Object: make(map[string]*Element),
 			Value:  name,
 		}
-		goto NAME_STATE
+		goto CHECK_EMPTY_OBJECT
 	case arrayLeftToken:
 		es.Push(current)
 		current = &Element{
@@ -197,11 +197,10 @@ ARRAY_STATE_FIRST:
 			Array: make([]*Element, 0, 8),
 			Value: name,
 		}
-		goto ARRAY_STATE
+		goto CHECK_EMPTY_ARRAY
 	}
 	return nil, fmt.Errorf("unexpected token %s in line %v", token.TypeStr(), t.line)
 NEXT_ARRAY_ELEMENT:
-	current.Array = append(current.Array, child)
 	if !t.Next(token) {
 		return nil, token.Err
 	}
@@ -236,15 +235,8 @@ CHECK_EMPTY_OBJECT:
 	}
 	if token.Type == objectRightToken {
 		child = current
-		if current = es.Pop(); current == nil {
-			if !t.Next(token) {
-				return nil, token.Err
-			}
-			if token.Type != doneToken {
-				return nil, fmt.Errorf("unexpected token %s after top level object in line %v", token.TypeStr(), t.line)
-			}
-			return child, nil
-		}
+		// cannot be nil
+		current = es.Pop()
 		if current.Type == objectType {
 			current.Object[child.Value] = child
 			goto NEXT_OBJECT_PAIR
@@ -261,20 +253,13 @@ CHECK_EMPTY_ARRAY:
 	}
 	if token.Type == arrayRightToken {
 		child = current
-		if current = es.Pop(); current == nil {
-			if !t.Next(token) {
-				return nil, token.Err
-			}
-			if token.Type != doneToken {
-				return nil, fmt.Errorf("unexpected token %s after top level array in line %v", token.TypeStr(), t.line)
-			}
-			return child, nil
-		}
+		// cannot be nil
+		current = es.Pop()
 		if current.Type == objectType {
 			current.Object[child.Value] = child
 			goto NEXT_OBJECT_PAIR
 		}
-		// must be an arry
+		// must be an array
 		current.Array = append(current.Array, child)
 		goto NEXT_ARRAY_ELEMENT
 	}
