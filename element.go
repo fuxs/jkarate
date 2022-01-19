@@ -123,6 +123,10 @@ func (e *Element) IsObject() bool {
 	return e != nil && e.Type == objectType
 }
 
+func (e *Element) IsBoolean() bool {
+	return e != nil && e.Type == boolType
+}
+
 func (e *Element) Size() int {
 	if e != nil {
 		switch e.Type {
